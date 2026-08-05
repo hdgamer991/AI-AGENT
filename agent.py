@@ -1,100 +1,76 @@
-"""
-Minimal AI agent w/ tool use (Anthropic API).
-Tools: calculator, file_read
-"""
 import os
-from anthropic import Anthropic
+from openai import OpenAI
+import json
 
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
-MODEL = "claude-sonnet-4-6"
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+MODEL = "gpt-4o-mini"
 
 TOOLS = [
     {
-        "name": "calculator",
-        "description": "Evaluate a basic math expression. Input e.g. '2 + 2 * 3'.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "expression": {"type": "string", "description": "Math expression to evaluate"}
-            },
-            "required": ["expression"]
+        "type": "function",
+        "function": {
+            "name": "calculator",
+            "description": "Evaluate a basic math expression.",
+            "parameters": {
+                "type": "object",
+                "properties": {"expression": {"type": "string"}},
+                "required": ["expression"]
+            }
         }
     },
     {
-        "name": "file_read",
-        "description": "Read contents of a local text file by path.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "Path to file"}
-            },
-            "required": ["path"]
+        "type": "function",
+        "function": {
+            "name": "file_read",
+            "description": "Read a local text file by path.",
+            "parameters": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"]
+            }
         }
     }
 ]
 
-
-def run_calculator(expression: str) -> str:
+def run_calculator(expression):
     try:
         allowed = "0123456789+-*/(). "
         if not all(c in allowed for c in expression):
-            return "Error: invalid characters in expression"
-        result = eval(expression, {"__builtins__": {}}, {})
-        return str(result)
+            return "Error: invalid chars"
+        return str(eval(expression, {"__builtins__": {}}, {}))
     except Exception as e:
         return f"Error: {e}"
 
-
-def run_file_read(path: str) -> str:
+def run_file_read(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        return content[:5000]
+            return f.read()[:5000]
     except Exception as e:
         return f"Error: {e}"
 
-
 TOOL_FUNCS = {
-    "calculator": lambda inp: run_calculator(inp["expression"]),
-    "file_read": lambda inp: run_file_read(inp["path"]),
+    "calculator": run_calculator,
+    "file_read": run_file_read,
 }
 
-
-def run_agent(user_input: str, messages=None, max_turns: int = 8):
+def run_agent(user_input, messages=None, max_turns=8):
     if messages is None:
         messages = []
     messages.append({"role": "user", "content": user_input})
-
     for _ in range(max_turns):
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=1024,
-            tools=TOOLS,
-            messages=messages,
+        response = client.chat.completions.create(
+            model=MODEL, tools=TOOLS, messages=messages
         )
-
-        messages.append({"role": "assistant", "content": response.content})
-
-        if response.stop_reason != "tool_use":
-            text_parts = [b.text for b in response.content if b.type == "text"]
-            return "\n".join(text_parts), messages
-
-        tool_results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                fn = TOOL_FUNCS.get(block.name)
-                result = fn(block.input) if fn else f"Error: unknown tool {block.name}"
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result,
-                })
-
-        messages.append({"role": "user", "content": tool_results})
-
-    return "Max turns hit w/o final answer.", messages
-
+        msg = response.choices[0].message
+        messages.append(msg)
+        if not msg.tool_calls:
+            return msg.content, messages
+        for tc in msg.tool_calls:
+            fn = TOOL_FUNCS.get(tc.function.name)
+            args = json.loads(tc.function.arguments)
+            result = fn(list(args.values())[0]) if fn else f"Error: unknown tool"
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
+    return "Max turns hit.", messages
 
 if __name__ == "__main__":
     print("Agent ready. Type 'exit' to quit.")

@@ -44,6 +44,9 @@ def file_read(path: str):
 
 def write_file(path: str, content: str):
     try:
+        # small models sometimes double-escape newlines/tabs as literal \n \t
+        if "\\n" in content or "\\t" in content:
+            content = content.replace("\\n", "\n").replace("\\t", "\t")
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w") as f:
             f.write(content)

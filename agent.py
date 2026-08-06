@@ -42,12 +42,22 @@ def file_read(path: str):
     except Exception as e:
         return {"error": str(e)}
 
+def write_file(path: str, content: str):
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w") as f:
+            f.write(content)
+        return {"status": "written", "path": path, "bytes": len(content)}
+    except Exception as e:
+        return {"error": str(e)}
+
 def finish_task(summary: str):
     return {"status": "done", "summary": summary}
 
 TOOL_IMPLS = {
     "calculator": calculator,
     "file_read": file_read,
+    "write_file": write_file,
     "finish_task": finish_task,
 }
 
@@ -73,6 +83,21 @@ TOOLS = [
                 "type": "object",
                 "properties": {"path": {"type": "string"}},
                 "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": "Write content to a local file, creating it or overwriting if it exists",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["path", "content"],
             },
         },
     },

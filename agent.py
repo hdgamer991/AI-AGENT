@@ -143,7 +143,7 @@ def _try_parse_fake_tool_call(content: str):
             return "finish_task", {"summary": obj["summary"]}
 
     # fn_name("...") style, anywhere in text
-    m = re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)\(\s*["\'](.*?)["\']\s*\)', content, re.DOTALL)
+    m = re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)\(\s*(?:\w+\s*=\s*)?["\'](.*?)["\']\s*\)', content, re.DOTALL)
     if m:
         name, arg_str = m.group(1), m.group(2)
         if name == "finish_task":
@@ -180,7 +180,8 @@ def run_agent(goal: str, max_steps: int = 12, verbose: bool = True):
             "Always use the actual function-calling mechanism to invoke tools — "
             "never write a tool call as plain text or JSON in your message content. "
             "When the goal is fully achieved, call finish_task with a summary. "
-            "Do not call finish_task early."
+            "Do not call finish_task early. "
+            "When calling write_file, always include the complete code or text as the content argument — never leave it empty."
         )},
         {"role": "user", "content": f"Goal: {goal}\n\nPlan:\n{subtasks}"},
     ]

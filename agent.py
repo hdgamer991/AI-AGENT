@@ -42,7 +42,12 @@ def file_read(path: str):
     except Exception as e:
         return {"error": str(e)}
 
-def write_file(path: str, content: str):
+def write_file(path: str = None, content: str = None, **kwargs):
+    # normalize common key aliases small models use instead of 'path'/'content'
+    if path is None:
+        path = kwargs.get("filename") or kwargs.get("file_path") or kwargs.get("filepath") or "output.txt"
+    if content is None:
+        content = kwargs.get("text") or kwargs.get("data") or kwargs.get("code") or ""
     try:
         # small models sometimes double-escape newlines/tabs as literal \n \t
         if "\\n" in content or "\\t" in content:
@@ -187,7 +192,8 @@ def run_agent(goal: str, max_steps: int = 12, verbose: bool = True):
             "Do not call finish_task early. "
             "When calling write_file, always include the complete code or text as the content argument — never leave it empty. "
             "Default to Python (.py) for code-writing tasks unless another language is explicitly requested. "
-            "The calculator tool is ONLY for evaluating numeric math expressions — never use it to run print statements, console.log, or any code."
+            "The calculator tool is ONLY for evaluating numeric math expressions — never use it to run print statements, console.log, or any code. "
+            "write_file requires exactly two arguments named 'path' and 'content' — never 'filename', 'text', or any other name."
         )},
         {"role": "user", "content": f"Goal: {goal}\n\nPlan:\n{subtasks}"},
     ]

@@ -362,7 +362,7 @@ def plan(goal: str):
 
 # ---------- agent loop ----------
 
-def run_agent(goal: str, max_steps: int = 12, verbose: bool = True):
+def run_agent(goal: str, max_steps: int = 20, verbose: bool = True):
     subtasks = plan(goal)
     if verbose:
         print("PLAN:\n", subtasks, "\n")

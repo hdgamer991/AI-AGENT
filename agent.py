@@ -96,6 +96,10 @@ def append_file(path: str = None, content: str = None, **kwargs):
     except Exception as e:
         return {"error": str(e)}
 
+def get_timestamp(fmt: str = "%Y-%m-%d %H:%M:%S"):
+    from datetime import datetime
+    return {"timestamp": datetime.now().strftime(fmt)}
+
 def finish_task(summary: str):
     return {"status": "done", "summary": summary}
 
@@ -106,6 +110,7 @@ TOOL_IMPLS = {
     "run_script": run_script,
     "list_dir": list_dir,
     "append_file": append_file,
+    "get_timestamp": get_timestamp,
     "finish_task": finish_task,
 }
 
@@ -188,6 +193,18 @@ TOOLS = [
                     "content": {"type": "string"},
                 },
                 "required": ["path", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_timestamp",
+            "description": "Get the current real date/time as a formatted string. Always use this instead of guessing a timestamp.",
+            "parameters": {
+                "type": "object",
+                "properties": {"fmt": {"type": "string"}},
+                "required": [],
             },
         },
     },

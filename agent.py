@@ -9,7 +9,7 @@ from openai import OpenAI
 client = OpenAI(api_key="ollama",
                  base_url=os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1"))
 
-MODEL = os.environ.get("LLM_MODEL", "llama3.2:3b")
+MODEL = os.environ.get("LLM_MODEL", "llama3.2:3wib")
 
 # ---------- tools ----------
 
@@ -184,7 +184,9 @@ def run_agent(goal: str, max_steps: int = 12, verbose: bool = True):
             "never write a tool call as plain text or JSON in your message content. "
             "When the goal is fully achieved, call finish_task with a summary. "
             "Do not call finish_task early. "
-            "When calling write_file, always include the complete code or text as the content argument — never leave it empty."
+            "When calling write_file, always include the complete code or text as the content argument — never leave it empty. "
+            "Default to Python (.py) for code-writing tasks unless another language is explicitly requested. "
+            "The calculator tool is ONLY for evaluating numeric math expressions — never use it to run print statements, console.log, or any code."
         )},
         {"role": "user", "content": f"Goal: {goal}\n\nPlan:\n{subtasks}"},
     ]

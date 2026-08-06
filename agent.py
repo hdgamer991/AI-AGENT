@@ -9,7 +9,7 @@ from openai import OpenAI
 client = OpenAI(api_key="ollama",
                  base_url=os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1"))
 
-MODEL = os.environ.get("LLM_MODEL", "llama3.2:3wib")
+MODEL = os.environ.get("LLM_MODEL", "llama3.2:3b")
 
 # ---------- tools ----------
 
@@ -131,7 +131,8 @@ def _try_parse_fake_tool_call(content: str):
         return None
 
     for m in re.finditer(r'\{[^{}]*\}', content):
-        fixed = m.group(0).replace("'", '"').replace('\\"', '"').replace('\\"', '"').replace('\\', '')
+        fixed = m.group(0).replace("'", '"').replace('\\"', '"')
+        fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', fixed)
         try:
             obj = json.loads(fixed)
         except Exception:

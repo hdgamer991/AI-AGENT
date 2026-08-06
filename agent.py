@@ -4,6 +4,7 @@ import json
 import ast
 import operator as op
 import subprocess
+import requests
 from openai import OpenAI
 
 # local model via Ollama (OpenAI-compat endpoint), no API key needed
@@ -100,6 +101,45 @@ def get_timestamp(fmt: str = "%Y-%m-%d %H:%M:%S"):
     from datetime import datetime
     return {"timestamp": datetime.now().strftime(fmt)}
 
+def run_command(command: str, timeout: int = 15):
+    try:
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=timeout
+        )
+        return {
+            "stdout": result.stdout[:3000],
+            "stderr": result.stderr[:1000],
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {"error": f"command timed out after {timeout}s"}
+    except Exception as e:
+        return {"error": str(e)}
+
+def http_request(url: str, method: str = "GET", body: str = None):
+    try:
+        resp = requests.request(method.upper(), url, data=body, timeout=10)
+        return {
+            "status_code": resp.status_code,
+            "body": resp.text[:3000],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def pip_install(package: str):
+    try:
+        result = subprocess.run(
+            ["pip", "install", "--break-system-packages", package],
+            capture_output=True, text=True, timeout=60
+        )
+        return {
+            "stdout": result.stdout[-1000:],
+            "stderr": result.stderr[-500:],
+            "returncode": result.returncode,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 def finish_task(summary: str):
     return {"status": "done", "summary": summary}
 
@@ -111,6 +151,9 @@ TOOL_IMPLS = {
     "list_dir": list_dir,
     "append_file": append_file,
     "get_timestamp": get_timestamp,
+    "run_command": run_command,
+    "http_request": http_request,
+    "pip_install": pip_install,
     "finish_task": finish_task,
 }
 
@@ -205,6 +248,49 @@ TOOLS = [
                 "type": "object",
                 "properties": {"fmt": {"type": "string"}},
                 "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_command",
+            "description": "Execute any shell command (not just python scripts) and return stdout/stderr",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string"},
+                    "timeout": {"type": "integer"},
+                },
+                "required": ["command"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "http_request",
+            "description": "Make an HTTP request to a URL and return status code and response body",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string"},
+                    "method": {"type": "string"},
+                    "body": {"type": "string"},
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "pip_install",
+            "description": "Install a Python package via pip so it can be used in scripts",
+            "parameters": {
+                "type": "object",
+                "properties": {"package": {"type": "string"}},
+                "required": ["package"],
             },
         },
     },

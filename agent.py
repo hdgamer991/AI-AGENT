@@ -3,6 +3,7 @@ import re
 import json
 import ast
 import operator as op
+import subprocess
 from openai import OpenAI
 
 # local model via Ollama (OpenAI-compat endpoint), no API key needed
@@ -59,6 +60,42 @@ def write_file(path: str = None, content: str = None, **kwargs):
     except Exception as e:
         return {"error": str(e)}
 
+def run_script(path: str, timeout: int = 10):
+    try:
+        result = subprocess.run(
+            ["python3", path], capture_output=True, text=True, timeout=timeout
+        )
+        return {
+            "stdout": result.stdout[:3000],
+            "stderr": result.stderr[:1000],
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {"error": f"script timed out after {timeout}s"}
+    except Exception as e:
+        return {"error": str(e)}
+
+def list_dir(path: str = "."):
+    try:
+        entries = os.listdir(path)
+        return {"path": path, "entries": entries}
+    except Exception as e:
+        return {"error": str(e)}
+
+def append_file(path: str = None, content: str = None, **kwargs):
+    if path is None:
+        path = kwargs.get("filename") or kwargs.get("file_path") or "output.txt"
+    if content is None:
+        content = kwargs.get("text") or kwargs.get("data") or ""
+    try:
+        if "\\n" in content or "\\t" in content:
+            content = content.replace("\\n", "\n").replace("\\t", "\t")
+        with open(path, "a") as f:
+            f.write(content)
+        return {"status": "appended", "path": path, "bytes": len(content)}
+    except Exception as e:
+        return {"error": str(e)}
+
 def finish_task(summary: str):
     return {"status": "done", "summary": summary}
 
@@ -66,6 +103,9 @@ TOOL_IMPLS = {
     "calculator": calculator,
     "file_read": file_read,
     "write_file": write_file,
+    "run_script": run_script,
+    "list_dir": list_dir,
+    "append_file": append_file,
     "finish_task": finish_task,
 }
 
@@ -99,6 +139,48 @@ TOOLS = [
         "function": {
             "name": "write_file",
             "description": "Write content to a local file, creating it or overwriting if it exists",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["path", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_script",
+            "description": "Execute a local Python script and return its stdout/stderr",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "timeout": {"type": "integer"},
+                },
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_dir",
+            "description": "List files and folders in a directory",
+            "parameters": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_file",
+            "description": "Append content to the end of an existing file, or create it if missing",
             "parameters": {
                 "type": "object",
                 "properties": {

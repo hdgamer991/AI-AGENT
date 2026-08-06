@@ -315,6 +315,12 @@ def run_agent(goal: str, max_steps: int = 12, verbose: bool = True):
 
             if verbose:
                 print(f"[step {step}] no tool call, model said:", msg.content)
+            if step < max_steps - 1:
+                history.append({
+                    "role": "user",
+                    "content": "Continue the task by calling the appropriate tool now. If fully done, call finish_task with a summary."
+                })
+                continue
             return msg.content
 
         for call in msg.tool_calls:

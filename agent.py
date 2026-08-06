@@ -128,7 +128,7 @@ def _try_parse_fake_tool_call(content: str):
         return None
 
     for m in re.finditer(r'\{[^{}]*\}', content):
-        fixed = m.group(0).replace("'", '"').replace('\\"', '"').replace('\\', '').replace('\\"', '"').replace('\\', '')
+        fixed = m.group(0).replace("'", '"').replace('\\"', '"').replace('\\"', '"').replace('\\', '')
         try:
             obj = json.loads(fixed)
         except Exception:

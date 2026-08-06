@@ -10,7 +10,7 @@ from openai import OpenAI
 client = OpenAI(api_key="ollama",
                  base_url=os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1"))
 
-MODEL = os.environ.get("LLM_MODEL", "llama3.2:3b")
+MODEL = os.environ.get("LLM_MODEL", "qwen2.5:3b")
 
 # ---------- tools ----------
 
